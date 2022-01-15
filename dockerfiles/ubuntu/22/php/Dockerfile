@@ -1,5 +1,6 @@
-ARG VERSION
+ARG VERSION=latest
 FROM ubuntu:${VERSION}
 
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
-    apt install php8.1-fpm=8.1.0-1
+    apt install -y php8.1-fpm=8.1.0-1
