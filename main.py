@@ -44,8 +44,8 @@ def get_image_tags(query_url: str, auth_token: str, image_name: str) -> list:
 
 def load_image_build_configs(config_root: str) -> list:
     """
-    Walk a directory structure and build a dictionary that contains all the information needed to trigger the build of
-    all the Dockerfiles that are found
+    Walk a directory structure and build a dictionary that contains all the
+    information needed to trigger the build of the Dockerfiles that are found
     :param config_root: The root directory to look for image configs
     """
     image_build_config: list = []
@@ -74,7 +74,6 @@ if __name__ == '__main__':
 
     print(image_build_configs)
     docker_client = docker.from_env()
-
 
     for config in image_build_configs:
         print(config)
