@@ -63,13 +63,7 @@ def load_image_build_configs(config_root: str) -> list:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('image', help='The name of the image to retrieve tags for')
-    args = parser.parse_args()
 
-    auth_token = get_auth_token(image_name=args.image, auth_url=AUTH_URL)
-    tags = get_image_tags(query_url=QUERY_URL, auth_token=auth_token, image_name=args.image)
-    print(tags)
     image_build_configs = load_image_build_configs('dockerfiles')
 
     print(image_build_configs)
