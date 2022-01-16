@@ -1,7 +1,10 @@
+import json
+
 import requests
 import argparse
 import docker
 from pathlib import Path
+from docker.errors import DockerException
 
 QUERY_URL = "https://index.docker.io"
 AUTH_URL = "https://auth.docker.io"
@@ -42,7 +45,7 @@ def get_image_tags(query_url: str, auth_token: str, image_name: str) -> list:
     return request.json().get('tags', 'None')
 
 
-def load_image_build_configs(config_root: str) -> list:
+def load_image_build_configs(config_root: str) -> str:
     """
     Walk a directory structure and build a dictionary that contains all the
     information needed to trigger the build of the Dockerfiles that are found
@@ -59,26 +62,59 @@ def load_image_build_configs(config_root: str) -> list:
                 version = file.read().rstrip()
         image_build_config.append(dict({'Dockerfile': docker_file_path, 'version': version}))
 
-    return image_build_config
+    return json.dumps(image_build_config)
+
+
+def build_image(docker_file: str, build_args: str) -> bool:
+    """
+    Use a docker client to trigger an image build based on the inputs
+    :param build_args: Key value pairs key=value,key=value... to be passed to the build process
+    :param docker_file: Path to the Dockerfile
+    :return: bool representing a successful or failed build
+    """
+    docker_client = docker.from_env()
+
+    print(f'Building Image from {docker_file} with build args {build_args}.')
+
+    dockerfile_directory = str(Path(docker_file).parent)
+    build_args_dict = dict(x.split("=") for x in build_args.split(","))
+
+    try:
+        build_result = docker_client.images.build(path=dockerfile_directory,
+                                                  buildargs=build_args_dict,
+                                                  tag=build_args_dict.get('version'))
+    except DockerException as error:
+        print('Error building Dockerfile:\n'
+              f'{error}')
+        return False
+
+    for log in build_result[1]:
+        print(log, flush=True)
+    docker_client.close()
+
+    return True
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Docker Image Build Management')
+    parser.add_argument('--get-build-configs', action='store_true', required=False,
+                        help='Find all the Dockerfiles to build and return them as a list of dicts')
+    parser.add_argument('--build-image', action='store_true',
+                        help='Build an image based on the values of required arguments '
+                             '--docker-file and --build-args.')
+    parser.add_argument('--docker-file',
+                        help='Path to the Dockerfile to build, requires --build-image and --build-args')
+    parser.add_argument('--build-args',
+                        help='Key value pairs representing build arguments to docker build.\n'
+                             'Expected format: key=value,key=value,...\n'
+                             'Requires --build-image and --docker-file.')
 
-    image_build_configs = load_image_build_configs('dockerfiles')
+    args = parser.parse_args()
 
-    print(image_build_configs)
-    docker_client = docker.from_env()
-
-    for config in image_build_configs:
-        print(config)
-        dockerfile_directory = str(Path(config.get('Dockerfile')).parent)
-        build_args = {'VERSION': config.get('version')}
-        build_result = docker_client.images.build(path=dockerfile_directory,
-                                                  buildargs=build_args,
-                                                  tag=config.get('version'))
-
-        for log in build_result[1]:
-            print(log, flush=True)
-
-    docker_client.close()
-
+    if args.get_build_configs:
+        print(load_image_build_configs('dockerfiles'))
+    elif args.build_image and (args.docker_file is None or args.build_args is None):
+        parser.error("--build-image requires --docker-file and --build-args.")
+    elif args.build_image and args.docker_file and args.build_args:
+        print(args.build_image)
+        build_image(docker_file=args.docker_file, build_args=args.build_args)
