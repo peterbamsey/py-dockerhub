@@ -51,7 +51,7 @@ def load_image_build_configs(config_root: str) -> str:
     information needed to trigger the build of the Dockerfiles that are found
     :param config_root: The root directory to look for image configs
     """
-    image_build_config: list = []
+    image_build_config: dict = {"builds": []}
     for path in Path(config_root).rglob('Dockerfile'):
         # Check for a version file, two levels up, otherwise assume latest
         version_file_path = f'{path.resolve().parents[1]}/version'
@@ -60,7 +60,7 @@ def load_image_build_configs(config_root: str) -> str:
         if Path(version_file_path).exists():
             with open(version_file_path, 'r') as file:
                 version = file.read().rstrip()
-        image_build_config.append(dict({'Dockerfile': docker_file_path, 'version': version}))
+        image_build_config["builds"].append(dict({'Dockerfile': docker_file_path, 'version': version}))
 
     return json.dumps(image_build_config)
 

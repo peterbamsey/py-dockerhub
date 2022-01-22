@@ -72,4 +72,4 @@ jobs:
     - name: Build images
       run: |
         pipenv install
-        pipenv run python main.py --build-image --docker-file ${{ matrix.Dockerfile }} --build-args "VERSION=${{matrix.version}}"
+        pipenv run python main.py --build-image --docker-file ${{ matrix.builds.Dockerfile }} --build-args "VERSION=${{matrix.builds.version}}"
